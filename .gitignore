@@ -1,0 +1,52 @@
+# Maven
+target/
+**/target/
+artifacts/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Eclipse / JDTLS (Sublime LSP-jdtls)
+.classpath
+.project
+.settings/
+.factorypath
+**/.classpath
+**/.project
+**/.settings/
+**/.factorypath
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# Visual Studio Code
+.vscode/
+
+# Sublime Text workspace / session
+*.sublime-workspace
+
+# Logs and databases
+*.log
+*.db-shm
+*.db-wal
+*.db-journal
+
+# Draw.io and editors backup
+.*.bkp
+*.drawio.bkp
+*~
+*.swp
+
+# OS generated files
+.DS_Store
+Thumbs.db
