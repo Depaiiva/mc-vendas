@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Produtos · Doce & Pão</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments/navigation :: navigation('products')}"></div>
+    <main class="main-content">
+        <div class="page-heading"><div><p class="eyebrow">CATÁLOGO INTERNO</p><h1>Produtos</h1>
+            <p class="page-subtitle">Atualize preços e disponibilidade dos itens vendidos.</p></div></div>
+        <div th:if="${success}" class="notice notice-success" th:text="${success}" role="status"></div>
+        <div th:if="${error}" class="notice notice-error" th:text="${error}" role="alert"></div>
+        <section class="section-block create-panel">
+            <div class="section-heading"><div><span class="section-kicker">+</span><h2>Novo produto</h2></div></div>
+            <form th:action="@{/products/save}" method="post" class="edit-grid">
+                <div class="field"><label for="newName">Nome</label><input id="newName" name="name" required maxlength="120"></div>
+                <div class="field"><label for="newPrice">Preço (R$)</label><input id="newPrice" name="price" type="number" min="0.01" step="0.01" required></div>
+                <div class="field"><label for="newType">Tipo</label><select id="newType" name="type" required>
+                    <option th:each="type : ${types}" th:value="${type}" th:text="${@labels.type(type)}"></option></select></div>
+                <div class="field"><label for="newDescription">Descrição</label><input id="newDescription" name="description" maxlength="500"></div>
+                <label class="check-field"><input type="checkbox" name="active" value="true" checked> Ativo</label>
+                <button class="button button-primary" type="submit">Criar produto</button>
+            </form>
+        </section>
+        <section class="section-block">
+            <div class="section-heading"><div><span class="section-kicker" th:text="${#lists.size(products)}"></span><h2>Produtos cadastrados</h2></div></div>
+            <div class="manage-list">
+                <article class="manage-card" th:each="product : ${products}">
+                    <div class="manage-card-title">
+                        <div>
+                            <span class="product-type" th:text="${@labels.type(product.type)}"></span>
+                            <strong th:text="${product.name}"></strong>
+                        </div>
+                        <span class="status-pill" th:classappend="${product.active} ? ' status-active' : ' status-inactive'"
+                              th:text="${product.active} ? 'Ativo' : 'Inativo'"></span>
+                    </div>
+
+                    <form th:id="${'form-save-' + product.id}" th:action="@{/products/save}" method="post" class="manage-card-form">
+                        <input type="hidden" name="id" th:value="${product.id}">
+                        <div class="edit-grid">
+                            <div class="field">
+                                <label th:for="${'name-' + product.id}">Nome</label>
+                                <input th:id="${'name-' + product.id}" name="name" th:value="${product.name}" required maxlength="120">
+                            </div>
+                            <div class="field">
+                                <label th:for="${'price-' + product.id}">Preço (R$)</label>
+                                <input th:id="${'price-' + product.id}" name="price" type="number" min="0.01" step="0.01" th:value="${product.price}" required>
+                            </div>
+                            <div class="field">
+                                <label th:for="${'type-' + product.id}">Tipo</label>
+                                <select th:id="${'type-' + product.id}" name="type">
+                                    <option th:each="type : ${types}" th:value="${type}" th:text="${@labels.type(type)}"
+                                            th:selected="${type == product.type}"></option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label th:for="${'description-' + product.id}">Descrição</label>
+                                <input th:id="${'description-' + product.id}" name="description" th:value="${product.description}">
+                            </div>
+                        </div>
+                    </form>
+
+                    <div class="manage-actions">
+                        <button class="button button-secondary" type="submit" th:form="${'form-save-' + product.id}">Salvar alterações</button>
+                        <form th:action="@{/products/{id}/toggle(id=${product.id})}" method="post">
+                            <input type="hidden" name="active" th:value="${!product.active}">
+                            <button class="button button-quiet" type="submit" th:text="${product.active} ? 'Desativar' : 'Ativar'"></button>
+                        </form>
+                    </div>
+                </article>
+                <div th:if="${#lists.isEmpty(products)}" class="empty-state"><h3>Cadastre o primeiro produto</h3></div>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Venda rápida · Doce & Pão</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script th:src="@{/js/sale.js}" defer></script>
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments/navigation :: navigation('sale')}"></div>
+    <main class="main-content">
+        <div class="page-heading">
+            <div>
+                <p class="eyebrow">CAIXA DO DIA</p>
+                <h1>Registrar venda</h1>
+                <p class="page-subtitle">Escolha os itens e registre em poucos segundos.</p>
+            </div>
+            <div class="today-chip"><span class="status-dot"></span> Presencial</div>
+        </div>
+        <div th:if="${success}" class="notice notice-success" th:text="${success}" role="status"></div>
+        <div th:if="${error}" class="notice notice-error" th:text="${error}" role="alert"></div>
+        <div th:if="${keepDate}" class="sr-only" id="kept-date" th:text="${keepDate}"></div>
+        <form th:action="@{/sale}" method="post" id="sale-form">
+            <section class="section-block">
+                <div class="section-heading">
+                    <div><span class="section-kicker">01</span><h2>O que saiu hoje?</h2></div>
+                    <span class="section-meta" th:text="${#temporals.format(selectedDate, 'dd/MM/yyyy')}"></span>
+                </div>
+                <div class="product-grid">
+                    <article class="sale-product" th:each="line : ${products}"
+                             th:classappend="${line.soldOut()} ? ' is-sold-out' : ''"
+                             th:attr="data-price=${line.product.price},data-available=${line.available}">
+                        <div class="sale-product-top">
+                            <div>
+                                <span class="product-type" th:text="${@labels.type(line.product.type)}"></span>
+                                <h3 th:text="${line.product.name}"></h3>
+                            </div>
+                            <span class="product-price" th:text="${@labels.money(line.product.price)}"></span>
+                        </div>
+                        <div class="sale-product-bottom">
+                            <span th:if="${line.soldOut()}" class="stock-out">Esgotado</span>
+                            <span th:unless="${line.soldOut()}" class="stock-left">
+                                <strong th:text="${line.available}"></strong> disponíveis
+                            </span>
+                            <div class="quantity-control">
+                                <button type="button" class="quantity-step" data-step="-1"
+                                        th:disabled="${line.soldOut()}" aria-label="Diminuir quantidade">−</button>
+                                <input class="sale-quantity" type="number" min="0" step="1" value="0"
+                                       th:max="${line.available}" th:name="'qty_' + ${line.product.id}"
+                                       th:disabled="${line.soldOut()}" th:attr="aria-label=${'Quantidade de ' + line.product.name}">
+                                <button type="button" class="quantity-step" data-step="1"
+                                        th:disabled="${line.soldOut()}" aria-label="Aumentar quantidade">+</button>
+                            </div>
+                        </div>
+                    </article>
+                    <div th:if="${#lists.isEmpty(products)}" class="empty-state">
+                        <span class="empty-icon">＋</span><h3>Nenhum produto ativo</h3>
+                        <p>Cadastre um produto para começar a registrar vendas.</p>
+                        <a class="button button-secondary" th:href="@{/products}">Abrir produtos</a>
+                    </div>
+                </div>
+            </section>
+            <section class="sale-details section-block">
+                <div class="section-heading">
+                    <div><span class="section-kicker">02</span><h2>Detalhes da venda</h2></div>
+                </div>
+                <div class="details-grid">
+                    <div class="field">
+                        <label for="saleDate">Data e hora</label>
+                        <input id="saleDate" name="date" type="datetime-local" required th:value="${dateTime}">
+                        <small>Para registrar uma venda esquecida, escolha a data original.</small>
+                    </div>
+                    <div class="field">
+                        <label for="customerName">Nome do cliente <span class="muted">(opcional)</span></label>
+                        <input id="customerName" name="customerName" type="text" maxlength="160" placeholder="Presencial">
+                    </div>
+                    <div class="field">
+                        <label for="customerContact">Contato <span class="muted">(opcional)</span></label>
+                        <input id="customerContact" name="customerContact" type="text" maxlength="160" placeholder="Telefone ou outro contato">
+                    </div>
+                </div>
+            </section>
+            <div class="sale-footer">
+                <div class="running-total"><span>Total da venda</span><strong id="sale-total">R$ 0,00</strong></div>
+                <button class="button button-primary button-register" type="submit">
+                    Registrar venda <span aria-hidden="true">→</span>
+                </button>
+            </div>
+        </form>
+    </main>
+</div>
+</body>
+</html>

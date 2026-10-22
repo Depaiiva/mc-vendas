@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Estoque do dia · Doce & Pão</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments/navigation :: navigation('stock')}"></div>
+    <main class="main-content">
+        <div class="page-heading">
+            <div><p class="eyebrow">PRODUÇÃO E DISPONIBILIDADE</p><h1>Estoque do dia</h1>
+                <p class="page-subtitle">Informe quantas unidades havia no início do dia.</p></div>
+        </div>
+        <div th:if="${success}" class="notice notice-success" th:text="${success}" role="status"></div>
+        <div th:if="${error}" class="notice notice-error" th:text="${error}" role="alert"></div>
+        <form class="date-filter" th:action="@{/stock}" method="get">
+            <label for="stockDate">Data</label>
+            <input id="stockDate" name="date" type="date" th:value="${selectedDate}">
+            <button class="button button-secondary" type="submit">Ver data</button>
+        </form>
+        <form th:action="@{/stock}" method="post">
+            <input type="hidden" name="date" th:value="${selectedDate}">
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Produto</th><th>Estoque inicial</th><th>Vendido</th><th>Disponível</th></tr></thead>
+                    <tbody>
+                    <tr th:each="line : ${stockLines}">
+                        <td><strong th:text="${line.product.name}"></strong><small th:text="${@labels.type(line.product.type)}"></small></td>
+                        <td><input class="table-number" type="number" min="0" step="1"
+                                   th:name="'initial_' + ${line.product.id}" th:value="${line.initial}" required></td>
+                        <td th:text="${line.sold}"></td>
+                        <td><span class="availability" th:classappend="${line.available <= 0} ? ' is-low' : ''"
+                                  th:text="${line.available}"></span></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(stockLines)}"><td colspan="4" class="table-empty">Não há produtos ativos.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="form-actions"><button class="button button-primary" type="submit">Salvar estoque inicial</button></div>
+        </form>
+        <p class="helper-note">Este valor pode ser corrigido depois. As vendas registradas são descontadas automaticamente.</p>
+    </main>
+</div>
+</body>
+</html>

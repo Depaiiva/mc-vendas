@@ -1,0 +1,17 @@
+<nav class="app-nav" th:fragment="navigation(active)">
+    <a class="brand" th:href="@{/sale}" aria-label="Doce & Pão, início">
+        <span class="brand-mark">D<span>&</span>P</span>
+        <span class="brand-name">Doce <span>&</span> Pão<small>gestão de vendas</small></span>
+    </a>
+    <div class="nav-links">
+        <a th:href="@{/sale}" th:classappend="${active == 'sale'} ? 'is-active' : ''"><span>+</span> Venda rápida</a>
+        <a th:href="@{/stock}" th:classappend="${active == 'stock'} ? 'is-active' : ''"><span>▤</span> Estoque do dia</a>
+        <a th:href="@{/orders}" th:classappend="${active == 'orders'} ? 'is-active' : ''"><span>≡</span> Vendas</a>
+        <a th:href="@{/products}" th:classappend="${active == 'products'} ? 'is-active' : ''"><span>◈</span> Produtos</a>
+        <a th:href="@{/ingredients}" th:classappend="${active == 'ingredients'} ? 'is-active' : ''"><span>⌁</span> Ingredientes e compras</a>
+        <a th:href="@{/dashboard}" th:classappend="${active == 'dashboard'} ? 'is-active' : ''"><span>↗</span> Resumo financeiro</a>
+    </div>
+    <form class="logout-form" th:action="@{/logout}" method="post">
+        <button class="nav-logout" type="submit" aria-label="Sair"><span>↪</span> Sair</button>
+    </form>
+</nav>

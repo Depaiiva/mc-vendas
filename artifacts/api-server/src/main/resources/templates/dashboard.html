@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resumo financeiro · Doce & Pão</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments/navigation :: navigation('dashboard')}"></div>
+    <main class="main-content">
+        <div class="page-heading">
+            <div><p class="eyebrow">VISÃO DO NEGÓCIO</p><h1>Resumo financeiro</h1>
+                <p class="page-subtitle">Vendas, compras e resultado no período selecionado.</p></div>
+        </div>
+        <form class="dashboard-filter" th:action="@{/dashboard}" method="get">
+            <div class="period-tabs" role="group" aria-label="Período">
+                <button type="submit" name="view" value="day" th:classappend="${view == 'day'} ? ' is-selected' : ''">Dia</button>
+                <button type="submit" name="view" value="week" th:classappend="${view == 'week'} ? ' is-selected' : ''">Semana</button>
+                <button type="submit" name="view" value="month" th:classappend="${view == 'month'} ? ' is-selected' : ''">Mês</button>
+            </div>
+            <label for="dashboardDate">Data de referência</label>
+            <input id="dashboardDate" name="date" type="date" th:value="${selectedDate}">
+            <input type="hidden" name="view" th:value="${view}">
+            <button class="button button-secondary" type="submit">Atualizar</button>
+        </form>
+        <div class="range-caption">
+            <span>Período</span><strong th:text="${@labels.date(period.start()) + ' — ' + @labels.date(period.end())}"></strong>
+        </div>
+        <section class="metric-grid">
+            <article class="metric-card metric-sales"><span>Vendas</span><strong th:text="${@labels.money(summary.sales())}"></strong>
+                <small>Confirmadas e entregues</small></article>
+            <article class="metric-card metric-expenses"><span>Despesas</span><strong th:text="${@labels.money(summary.expenses())}"></strong>
+                <small>Compras de ingredientes</small></article>
+            <article class="metric-card metric-profit"><span>Lucro</span><strong th:text="${@labels.money(summary.profit())}"></strong>
+                <small>Vendas menos compras do período</small></article>
+        </section>
+        <div class="notice notice-neutral cash-note">Lucro de caixa: considera o que foi comprado no período, não o custo dos itens vendidos.</div>
+        <section class="section-block">
+            <div class="section-heading"><div><span class="section-kicker">DETALHE</span><h2>Produtos vendidos</h2></div></div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead><tr><th>Produto</th><th>Unidades vendidas</th><th>Faturamento</th></tr></thead>
+                    <tbody>
+                    <tr th:each="metric : ${summary.products()}">
+                        <td><strong th:text="${metric.product().name}"></strong><small th:text="${@labels.type(metric.product().type)}"></small></td>
+                        <td th:text="${metric.quantity()}"></td>
+                        <td><strong th:text="${@labels.money(metric.revenue())}"></strong></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(summary.products())}"><td colspan="3" class="table-empty">Nenhuma venda nesse período.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+</body>
+</html>

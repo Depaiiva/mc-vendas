@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Entrar · Doce & Pão</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body class="login-page">
+<main class="login-shell">
+    <section class="login-brand">
+        <div class="brand-mark brand-mark-large">D<span>&</span>P</div>
+        <p class="eyebrow">VENDAS · ESTOQUE · CUIDADO</p>
+        <h1>Feito no campus.<br><span>Organizado por aqui.</span></h1>
+        <p class="login-intro">Seu espaço para acompanhar cada venda, cuidar do estoque e manter as contas em dia.</p>
+        <div class="login-stamp"><span>●</span> Área administrativa privada</div>
+    </section>
+    <section class="login-card">
+        <div class="login-card-heading">
+            <span class="eyebrow">BEM-VINDOS DE VOLTA</span>
+            <h2>Entrar na conta</h2>
+            <p>Use o acesso de administrador para continuar.</p>
+        </div>
+        <div th:if="${loginError}" class="notice notice-error" th:text="${loginError}" role="alert"></div>
+        <form th:action="@{/login}" method="post" class="form-stack">
+            <label for="username">Usuário</label>
+            <input id="username" name="username" type="text" autocomplete="username" required autofocus>
+            <label for="password">Senha</label>
+            <input id="password" name="password" type="password" autocomplete="current-password" required>
+            <button class="button button-primary button-wide" type="submit">Entrar <span aria-hidden="true">→</span></button>
+        </form>
+        <p class="login-footnote">Acesso exclusivo para os responsáveis.</p>
+    </section>
+</main>
+</body>
+</html>

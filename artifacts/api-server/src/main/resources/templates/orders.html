@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Vendas · Doce & Pão</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments/navigation :: navigation('orders')}"></div>
+    <main class="main-content">
+        <div class="page-heading">
+            <div><p class="eyebrow">HISTÓRICO DO CAIXA</p><h1>Vendas</h1>
+                <p class="page-subtitle">Confira o histórico e cancele uma venda registrada por engano.</p></div>
+            <a class="button button-primary" th:href="@{/sale}">+ Registrar venda</a>
+        </div>
+        <div th:if="${success}" class="notice notice-success" th:text="${success}" role="status"></div>
+        <div th:if="${error}" class="notice notice-error" th:text="${error}" role="alert"></div>
+        <form class="date-filter" th:action="@{/orders}" method="get">
+            <label for="ordersDate">Vendas de</label>
+            <input id="ordersDate" name="date" type="date" th:value="${selectedDate}">
+            <button class="button button-secondary" type="submit">Filtrar</button>
+        </form>
+        <div class="orders-list">
+            <article class="order-card" th:each="order : ${orders}">
+                <div class="order-main">
+                    <div class="order-time">
+                        <strong th:text="${#temporals.format(order.date, 'HH:mm')}"></strong>
+                        <span th:text="${order.customerName ?: 'Presencial'}"></span>
+                    </div>
+                    <div class="order-items">
+                        <div th:each="item : ${order.items}">
+                            <span th:text="${item.quantity + ' × ' + item.product.name}"></span>
+                            <span th:text="${@labels.money(item.calculateSubtotal())}"></span>
+                        </div>
+                        <p th:if="${order.customerContact}" class="muted order-contact" th:text="${order.customerContact}"></p>
+                    </div>
+                    <div class="order-total">
+                        <span class="status-pill" th:classappend="${' status-' + #strings.toLowerCase(order.status.name())}"
+                              th:text="${@labels.status(order.status)}"></span>
+                        <strong th:text="${@labels.money(order.calculateTotal())}"></strong>
+                    </div>
+                    <form th:if="${order.canCancel()}"
+                          th:action="@{/orders/{id}/cancel(id=${order.id})}" method="post" class="order-cancel">
+                        <input type="hidden" name="date" th:value="${selectedDate}">
+                        <button class="button button-danger-ghost" type="submit">Cancelar</button>
+                    </form>
+                </div>
+            </article>
+            <div th:if="${#lists.isEmpty(orders)}" class="empty-state">
+                <span class="empty-icon">≡</span><h3>Nenhuma venda nessa data</h3>
+                <p>Quando registrar uma venda, ela aparecerá aqui.</p>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>
