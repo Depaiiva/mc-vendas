@@ -11,6 +11,7 @@ import br.com.depaiva.repository.ProductRepository;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -43,6 +44,16 @@ public class StockService {
 
     @Transactional
     public DailyStock editInitialStock(Long productId, LocalDate date, int quantity) {
+        if (quantity < 0) {
+            throw new IllegalArgumentException("O estoque inicial não pode ser negativo.");
+        }
+        int soldOnDate = getSoldQuantity(productId, date);
+        if (quantity < soldOnDate) {
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new IllegalArgumentException("O produto selecionado não existe."));
+            throw new IllegalArgumentException("O estoque de " + product.getName()
+                    + " (" + quantity + ") não pode ser menor que o total já vendido nesta data (" + soldOnDate + ").");
+        }
         DailyStock stock = stockRepository.findByProductIdAndDate(productId, date)
                 .orElseGet(() -> {
                     Product product = productRepository.findById(productId)
@@ -53,17 +64,49 @@ public class StockService {
         return stockRepository.save(stock);
     }
 
+    @Transactional
+    public void resetStock(Long productId, LocalDate date) {
+        stockRepository.deleteByProductIdAndDate(productId, date);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasExplicitStock(Long productId, LocalDate date) {
+        return stockRepository.findByProductIdAndDate(productId, date).isPresent();
+    }
+
     @Transactional(readOnly = true)
     public int getInitialQuantity(Long productId, LocalDate date) {
-        return stockRepository.findByProductIdAndDate(productId, date)
-                .map(DailyStock::getInitialQuantity)
-                .orElse(0);
+        Optional<DailyStock> stock = stockRepository.findByProductIdAndDate(productId, date);
+        if (stock.isPresent()) {
+            return stock.get().getInitialQuantity();
+        }
+        return getCarriedOverStock(productId, date);
+    }
+
+    @Transactional(readOnly = true)
+    public int getCarriedOverStock(Long productId, LocalDate date) {
+        Optional<DailyStock> anchorRecord = stockRepository
+                .findFirstByProductIdAndDateLessThanOrderByDateDesc(productId, date);
+        if (anchorRecord.isEmpty()) {
+            return 0;
+        }
+        DailyStock anchor = anchorRecord.get();
+        int soldInBetween = getSoldQuantityBetween(productId, anchor.getDate(), date.minusDays(1));
+        return Math.max(0, anchor.getInitialQuantity() - soldInBetween);
     }
 
     @Transactional(readOnly = true)
     public int getSoldQuantity(Long productId, LocalDate date) {
+        return getSoldQuantityBetween(productId, date, date);
+    }
+
+    @Transactional(readOnly = true)
+    public int getSoldQuantityBetween(Long productId, LocalDate startDate, LocalDate endDate) {
+        if (endDate.isBefore(startDate)) {
+            return 0;
+        }
         return orderRepository.findAllByDateBetweenAndStatusIn(
-                        date.atStartOfDay(), date.atTime(LocalTime.MAX), STOCK_STATUSES)
+                        startDate.atStartOfDay(), endDate.atTime(LocalTime.MAX), STOCK_STATUSES)
                 .stream()
                 .flatMap(order -> order.getItems().stream())
                 .filter(item -> productId.equals(item.getProduct().getId()))

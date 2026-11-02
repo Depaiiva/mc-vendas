@@ -66,11 +66,22 @@
                     </form>
 
                     <div class="manage-actions">
-                        <button class="button button-secondary" type="submit" th:form="${'form-save-' + product.id}">Salvar alterações</button>
-                        <form th:action="@{/products/{id}/toggle(id=${product.id})}" method="post">
-                            <input type="hidden" name="active" th:value="${!product.active}">
-                            <button class="button button-quiet" type="submit" th:text="${product.active} ? 'Desativar' : 'Ativar'"></button>
-                        </form>
+                        <div class="manage-actions-left">
+                            <button class="button button-secondary" type="submit" th:form="${'form-save-' + product.id}">Salvar alterações</button>
+                            <form th:action="@{/products/{id}/duplicate(id=${product.id})}" method="post">
+                                <button class="button button-quiet" type="submit" title="Criar uma cópia deste produto">Duplicar</button>
+                            </form>
+                        </div>
+                        <div class="manage-actions-right">
+                            <form th:action="@{/products/{id}/toggle(id=${product.id})}" method="post">
+                                <input type="hidden" name="active" th:value="${!product.active}">
+                                <button class="button button-quiet" type="submit" th:text="${product.active} ? 'Desativar' : 'Ativar'"></button>
+                            </form>
+                            <form th:action="@{/products/{id}/delete(id=${product.id})}" method="post"
+                                  onsubmit="return confirm('Deseja realmente excluir este produto?');">
+                                <button class="button button-danger-ghost" type="submit" title="Excluir produto">Excluir</button>
+                            </form>
+                        </div>
                     </div>
                 </article>
                 <div th:if="${#lists.isEmpty(products)}" class="empty-state"><h3>Cadastre o primeiro produto</h3></div>

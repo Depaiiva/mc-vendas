@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Estoque do dia · Doce & Pão</title>
+    <title>Estoque semanal e diário · Doce & Pão</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
@@ -12,8 +12,11 @@
     <div th:replace="~{fragments/navigation :: navigation('stock')}"></div>
     <main class="main-content">
         <div class="page-heading">
-            <div><p class="eyebrow">PRODUÇÃO E DISPONIBILIDADE</p><h1>Estoque do dia</h1>
-                <p class="page-subtitle">Informe quantas unidades havia no início do dia.</p></div>
+            <div>
+                <p class="eyebrow">CICLO SEMANAL E DISPONIBILIDADE</p>
+                <h1>Estoque</h1>
+                <p class="page-subtitle">O estoque lançado na segunda se reflete na semana e eventuais sobras passam para a semana seguinte. Ajuste aqui em caso de perdas ou nova produção.</p>
+            </div>
         </div>
         <div th:if="${success}" class="notice notice-success" th:text="${success}" role="status"></div>
         <div th:if="${error}" class="notice notice-error" th:text="${error}" role="alert"></div>
@@ -26,23 +29,51 @@
             <input type="hidden" name="date" th:value="${selectedDate}">
             <div class="table-wrap">
                 <table class="data-table">
-                    <thead><tr><th>Produto</th><th>Estoque inicial</th><th>Vendido</th><th>Disponível</th></tr></thead>
+                    <thead><tr><th>Produto</th><th>Estoque inicial</th><th>Origem / Status</th><th>Vendido no dia</th><th>Disponível</th><th>Ação</th></tr></thead>
                     <tbody>
                     <tr th:each="line : ${stockLines}">
-                        <td><strong th:text="${line.product.name}"></strong><small th:text="${@labels.type(line.product.type)}"></small></td>
-                        <td><input class="table-number" type="number" min="0" step="1"
-                                   th:name="'initial_' + ${line.product.id}" th:value="${line.initial}" required></td>
+                        <td>
+                            <strong th:text="${line.product.name}"></strong>
+                            <small th:text="${@labels.type(line.product.type)}"></small>
+                        </td>
+                        <td>
+                            <input class="table-number" type="number" min="0" step="1"
+                                   th:name="'initial_' + ${line.product.id}" th:value="${line.initial}" required>
+                        </td>
+                        <td>
+                            <span th:if="${line.explicit}" class="status-pill status-delivered">Lançado / Ajustado</span>
+                            <div th:unless="${line.explicit}">
+                                <span class="status-pill status-confirmed" title="Saldo herdado automaticamente das vendas anteriores">Herdado automaticamente</span>
+                                <small th:if="${line.carriedOver > 0}" th:text="'Sobra transferida: ' + ${line.carriedOver} + ' un.'"></small>
+                            </div>
+                        </td>
                         <td th:text="${line.sold}"></td>
-                        <td><span class="availability" th:classappend="${line.available <= 0} ? ' is-low' : ''"
-                                  th:text="${line.available}"></span></td>
+                        <td>
+                            <span class="availability" th:classappend="${line.available <= 0} ? ' is-low' : ''"
+                                  th:text="${line.available}"></span>
+                        </td>
+                        <td>
+                            <button th:if="${line.explicit}" type="submit" th:form="'reset-form-' + ${line.product.id}"
+                                    class="button button-quiet button-sm" title="Desfazer ajuste manual nesta data e voltar a herdar o saldo das vendas">
+                                ↺ Restaurar automático
+                            </button>
+                            <span th:unless="${line.explicit}" class="muted" style="font-size: 11px;">Automático</span>
+                        </td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(stockLines)}"><td colspan="4" class="table-empty">Não há produtos ativos.</td></tr>
+                    <tr th:if="${#lists.isEmpty(stockLines)}"><td colspan="6" class="table-empty">Não há produtos ativos.</td></tr>
                     </tbody>
                 </table>
             </div>
-            <div class="form-actions"><button class="button button-primary" type="submit">Salvar estoque inicial</button></div>
+            <div class="form-actions"><button class="button button-primary" type="submit">Salvar estoque</button></div>
         </form>
-        <p class="helper-note">Este valor pode ser corrigido depois. As vendas registradas são descontadas automaticamente.</p>
+
+        <form th:each="line : ${stockLines}" th:if="${line.explicit}" th:id="'reset-form-' + ${line.product.id}"
+              th:action="@{/stock/reset}" method="post" style="display: none;">
+            <input type="hidden" name="date" th:value="${selectedDate}">
+            <input type="hidden" name="productId" th:value="${line.product.id}">
+        </form>
+
+        <p class="helper-note">O estoque lançado se propaga automaticamente pelos dias da semana com base nas vendas registradas, e qualquer sobra na sexta continua para a semana seguinte. Caso produtos tenham estragado ou uma nova leva tenha sido produzida, basta alterar o valor nesta data e clicar em "Salvar estoque".</p>
     </main>
 </div>
 </body>

@@ -8,5 +8,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DailyStockRepository extends JpaRepository<DailyStock, Long> {
     Optional<DailyStock> findByProductIdAndDate(Long productId, LocalDate date);
+    Optional<DailyStock> findFirstByProductIdAndDateLessThanOrderByDateDesc(Long productId, LocalDate date);
+    void deleteByProductIdAndDate(Long productId, LocalDate date);
     List<DailyStock> findAllByDate(LocalDate date);
+    boolean existsByProductId(Long productId);
+    long countByProductId(Long productId);
 }

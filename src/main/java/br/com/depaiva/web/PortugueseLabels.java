@@ -40,6 +40,28 @@ public class PortugueseLabels {
         };
     }
 
+    public String quantity(BigDecimal value) {
+        if (value == null || value.signum() == 0) {
+            return "0";
+        }
+        BigDecimal stripped = value.stripTrailingZeros();
+        if (stripped.scale() < 0) {
+            stripped = stripped.setScale(0);
+        }
+        NumberFormat formatter = NumberFormat.getNumberInstance(BRAZIL);
+        formatter.setMinimumFractionDigits(0);
+        formatter.setMaximumFractionDigits(3);
+        return formatter.format(stripped);
+    }
+
+    public String quantityWithUnit(BigDecimal value, Measure unit) {
+        String formatted = quantity(value);
+        if (unit == null) {
+            return formatted;
+        }
+        return formatted + " " + measure(unit);
+    }
+
     public String status(Status value) {
         return switch (value) {
             case PENDING -> "Pendente";

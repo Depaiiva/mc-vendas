@@ -197,15 +197,49 @@ h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -.025em; }
 .manage-card { padding: 17px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
 .manage-card-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
 .manage-card-title strong { display: block; font: 700 14px "Manrope", sans-serif; }
-.manage-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 12px; }
+.manage-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
 .manage-actions form { display: flex; }
+.manage-actions-left, .manage-actions-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .two-column { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .9fr); align-items: start; gap: 15px; }
 .form-stack { display: grid; gap: 11px; }
 .form-stack > .button { justify-self: start; margin-top: 3px; }
-.ingredient-list { display: grid; gap: 9px; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--line); }
-.ingredient-edit { display: grid; grid-template-columns: minmax(0, 1fr) 100px auto; align-items: end; gap: 8px; }
+.button-sm { min-height: 32px; padding: 0 9px; font-size: 11px; }
+
+.ingredient-list-header { margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--line); margin-bottom: 9px; }
+.ingredient-list-header h3 { margin: 0; color: #485151; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.ingredient-list { display: grid; gap: 9px; }
+.ingredient-row {
+    padding: 10px 11px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.ingredient-row.is-selected {
+    border-color: var(--mint-strong);
+    background: #fbfdfc;
+    box-shadow: 0 0 0 2px var(--mint);
+}
+.ingredient-edit { display: grid; grid-template-columns: minmax(0, 1fr) 95px auto; align-items: end; gap: 8px; }
 .ingredient-edit .field label { font-size: 10px; }
-.ingredient-edit .field input, .ingredient-edit .field select { height: 36px; }
+.ingredient-edit .field input, .ingredient-edit .field select { height: 34px; font-size: 12px; }
+.ingredient-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed #ece9e2;
+}
+.ingredient-delete-form { margin: 0; display: inline-flex; }
+.ingredient-detail-card {
+    margin-bottom: 24px;
+    border-color: var(--mint-strong);
+    background: #ffffff;
+}
 .form-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .period-total { gap: 7px; }
 .period-total strong { color: var(--navy); font: 750 14px "Manrope", sans-serif; }
