@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Confirmar exclusão · Doce & Pão</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <script>!function(){var t=localStorage.getItem("dc-theme")||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}();</script>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .confirm-card {
+            max-width: 580px;
+            margin: 40px auto;
+            background: var(--white);
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            padding: 32px;
+            box-shadow: var(--shadow);
+        }
+        .confirm-card h2 {
+            margin-top: 0;
+            color: var(--navy);
+            font-size: 20px;
+        }
+        .warning-box {
+            margin: 20px 0;
+            padding: 16px;
+            border-radius: 10px;
+            background: #fdf5f4;
+            border: 1px solid #f9deda;
+            color: #92372c;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .warning-box ul {
+            margin: 8px 0 0 20px;
+            padding: 0;
+        }
+        .warning-box li {
+            margin-bottom: 5px;
+        }
+        .clean-box {
+            margin: 20px 0;
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: #eef8f0;
+            border: 1px solid #c9e3d0;
+            color: #38664d;
+            font-size: 13px;
+        }
+        .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-shell">
+    <div th:replace="~{fragments/navigation :: navigation(${itemType == 'produto' ? 'products' : 'ingredients'})}"></div>
+    <main class="main-content">
+        <div class="confirm-card">
+            <p class="eyebrow">CONFIRMAÇÃO DE EXCLUSÃO</p>
+            <h2>Excluir <span th:text="${itemType}"></span>: <strong th:text="${itemName}"></strong></h2>
+
+            <p>Você solicitou a exclusão definitiva deste <span th:text="${itemType}"></span> do sistema.</p>
+
+            <div th:if="${hasDependencies}" class="warning-box">
+                <strong>Atenção:</strong> Os seguintes registros vinculados dependem deste <span th:text="${itemType}"></span> e também serão removidos se você confirmar a exclusão:
+                <ul>
+                    <li th:if="${orderCount != null && orderCount > 0}">
+                        <strong th:text="${orderCount}"></strong> venda(s) registrada(s) deste produto.
+                    </li>
+                    <li th:if="${stockCount != null && stockCount > 0}">
+                        <strong th:text="${stockCount}"></strong> registro(s) de controle diário de estoque.
+                    </li>
+                    <li th:if="${recipeIngredients != null && !#lists.isEmpty(recipeIngredients)}">
+                        Ingredientes cadastrados na ficha técnica:
+                        <strong th:text="${#strings.listJoin(recipeIngredients, ', ')}"></strong>.
+                    </li>
+                    <li th:if="${productNames != null && !#lists.isEmpty(productNames)}">
+                        Produtos que utilizam este ingrediente na ficha técnica:
+                        <strong th:text="${#strings.listJoin(productNames, ', ')}"></strong>.
+                    </li>
+                    <li th:if="${purchaseCount != null && purchaseCount > 0}">
+                        <strong th:text="${purchaseCount}"></strong> compra(s) registrada(s) deste ingrediente.
+                    </li>
+                </ul>
+                <p style="margin: 10px 0 0; font-weight: 600;">Esta ação não poderá ser desfeita.</p>
+            </div>
+
+            <div th:unless="${hasDependencies}" class="clean-box">
+                Este <span th:text="${itemType}"></span> não possui registros dependentes vinculados.
+            </div>
+
+            <div class="confirm-actions">
+                <a th:href="@{${cancelUrl}}" class="button button-secondary">Cancelar</a>
+                <form th:action="@{${confirmUrl}}" method="post" style="display:inline;">
+                    <input type="hidden" name="force" value="true">
+                    <button type="submit" class="button button-danger">Confirmar exclusão</button>
+                </form>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

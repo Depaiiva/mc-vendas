@@ -37,7 +37,7 @@ public class Ingredient {
             throw new IllegalArgumentException("Informe o nome e a unidade do ingrediente.");
         }
         name = nextName.trim();
-        unit = nextUnit;
+        unit = nextUnit.getBaseUnit();
     }
 
     public Long getId() { return id; }

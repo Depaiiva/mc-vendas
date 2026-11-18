@@ -36,9 +36,9 @@ public class DevSeedConfiguration {
                 stock.save(new DailyStock(pote, today, 8));
             }
             if (ingredients.count() == 0) {
-                ingredients.save(new Ingredient("Farinha de trigo", Measure.KILO_GRAMS));
+                ingredients.save(new Ingredient("Farinha de trigo", Measure.GRAMS));
                 ingredients.save(new Ingredient("Leite condensado", Measure.GRAMS));
-                ingredients.save(new Ingredient("Frango", Measure.KILO_GRAMS));
+                ingredients.save(new Ingredient("Frango", Measure.GRAMS));
             }
         };
     }

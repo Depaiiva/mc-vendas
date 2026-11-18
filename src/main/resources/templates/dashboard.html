@@ -3,58 +3,335 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Resumo financeiro · Doce & Pão</title>
+    <title>Resumo financeiro · Doce &amp; Pão</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <script>!function(){var t=localStorage.getItem("dc-theme")||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}();</script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="app-shell">
     <div th:replace="~{fragments/navigation :: navigation('dashboard')}"></div>
     <main class="main-content">
+
+        <!-- Page heading -->
         <div class="page-heading">
-            <div><p class="eyebrow">VISÃO DO NEGÓCIO</p><h1>Resumo financeiro</h1>
-                <p class="page-subtitle">Vendas, compras e resultado no período selecionado.</p></div>
-        </div>
-        <form class="dashboard-filter" th:action="@{/dashboard}" method="get">
-            <div class="period-tabs" role="group" aria-label="Período">
-                <button type="submit" name="view" value="day" th:classappend="${view == 'day'} ? ' is-selected' : ''">Dia</button>
-                <button type="submit" name="view" value="week" th:classappend="${view == 'week'} ? ' is-selected' : ''">Semana</button>
-                <button type="submit" name="view" value="month" th:classappend="${view == 'month'} ? ' is-selected' : ''">Mês</button>
+            <div>
+                <p class="eyebrow">VISÃO DO NEGÓCIO</p>
+                <h1>Resumo financeiro</h1>
+                <p class="page-subtitle">Faturamento, lucro, formas de pagamento e evolução de vendas no período.</p>
             </div>
-            <label for="dashboardDate">Data de referência</label>
-            <input id="dashboardDate" name="date" type="date" th:value="${selectedDate}">
-            <input type="hidden" name="view" th:value="${view}">
-            <button class="button button-secondary" type="submit">Atualizar</button>
+        </div>
+
+        <!-- ── Period filter ─────────────────────────────────────────────── -->
+        <form class="dashboard-filter" th:action="@{/dashboard}" method="get" id="period-form">
+            <div class="period-tabs" role="group" aria-label="Período">
+                <button type="submit" name="view" value="day"
+                        th:classappend="${view == 'day'} ? ' is-selected' : ''">Hoje</button>
+                <button type="submit" name="view" value="week"
+                        th:classappend="${view == 'week'} ? ' is-selected' : ''">Esta Semana</button>
+                <button type="submit" name="view" value="month"
+                        th:classappend="${view == 'month'} ? ' is-selected' : ''">Este Mês</button>
+                <button type="button" id="btn-custom"
+                        th:classappend="${view == 'custom'} ? ' is-selected' : ''">Personalizado</button>
+            </div>
+            <div class="period-custom-row" id="custom-row"
+                 th:classappend="${view != 'custom'} ? ' hidden' : ''">
+                <label for="pStart">De</label>
+                <input id="pStart" name="start" type="date" th:value="${period.start()}">
+                <label for="pEnd">Até</label>
+                <input id="pEnd" name="end" type="date" th:value="${period.end()}">
+                <input type="hidden" name="view" value="custom">
+                <button class="button button-secondary" type="submit">Aplicar</button>
+            </div>
+            <input type="hidden" name="date" th:value="${selectedDate}" th:if="${view != 'custom'}">
         </form>
         <div class="range-caption">
-            <span>Período</span><strong th:text="${@labels.date(period.start()) + ' — ' + @labels.date(period.end())}"></strong>
+            <span>Período</span>
+            <strong th:text="${@labels.date(period.start()) + ' — ' + @labels.date(period.end())}"></strong>
         </div>
-        <section class="metric-grid">
-            <article class="metric-card metric-sales"><span>Vendas</span><strong th:text="${@labels.money(summary.sales())}"></strong>
-                <small>Confirmadas e entregues</small></article>
-            <article class="metric-card metric-expenses"><span>Despesas</span><strong th:text="${@labels.money(summary.expenses())}"></strong>
-                <small>Compras de ingredientes</small></article>
-            <article class="metric-card metric-profit"><span>Lucro</span><strong th:text="${@labels.money(summary.profit())}"></strong>
-                <small>Vendas menos compras do período</small></article>
+
+        <!-- ── KPI Cards ──────────────────────────────────────────────────── -->
+        <section class="kpi-grid">
+
+            <!-- Faturamento Bruto -->
+            <article class="kpi-card kpi-sales">
+                <span class="kpi-label">Faturamento Bruto</span>
+                <strong class="kpi-value" th:text="${@labels.money(summary.sales())}"></strong>
+                <div class="kpi-footer">
+                    <small>Pedidos confirmados e entregues</small>
+                    <span class="variance-badge" th:classappend="${' ' + varSales.cssClass()}"
+                          th:text="${varSales.label()}"></span>
+                </div>
+            </article>
+
+            <!-- Lucro Líquido (Estimado) -->
+            <article class="kpi-card kpi-profit">
+                <span class="kpi-label">Lucro Líquido (Est.)</span>
+                <strong class="kpi-value" th:text="${@labels.money(summary.profit())}"></strong>
+                <div class="kpi-footer">
+                    <small th:text="'Margem: ' + ${@labels.percent(summary.margin())}"></small>
+                    <span class="variance-badge" th:classappend="${' ' + varProfit.cssClass()}"
+                          th:text="${varProfit.label()}"></span>
+                </div>
+            </article>
+
+            <!-- Ticket Médio -->
+            <article class="kpi-card kpi-ticket">
+                <span class="kpi-label">Ticket Médio</span>
+                <strong class="kpi-value" th:text="${@labels.money(summary.ticketMedio())}"></strong>
+                <div class="kpi-footer">
+                    <small>Por pedido no período</small>
+                    <span class="variance-badge" th:classappend="${' ' + varTicket.cssClass()}"
+                          th:text="${varTicket.label()}"></span>
+                </div>
+            </article>
+
+            <!-- Total de Vendas -->
+            <article class="kpi-card kpi-orders">
+                <span class="kpi-label">Total de Vendas</span>
+                <strong class="kpi-value" th:text="${summary.totalOrders()}"></strong>
+                <div class="kpi-footer">
+                    <small>Pedidos no período</small>
+                    <span class="variance-badge" th:classappend="${' ' + varOrders.cssClass()}"
+                          th:text="${varOrders.label()}"></span>
+                </div>
+            </article>
         </section>
-        <div class="notice notice-neutral cash-note">Lucro de caixa: considera o que foi comprado no período, não o custo dos itens vendidos.</div>
+
+        <!-- Empty state -->
+        <div th:if="${summary.totalOrders() == 0}" class="empty-state dashboard-empty">
+            <span class="empty-icon">📊</span>
+            <h3>Nenhuma venda nesse período</h3>
+            <p>Registre vendas para visualizar o resumo financeiro.</p>
+            <a class="button button-secondary" th:href="@{/sale}">Registrar venda</a>
+        </div>
+
+        <div th:unless="${summary.totalOrders() == 0}">
+
+        <!-- ── Payment Breakdown ──────────────────────────────────────────── -->
         <section class="section-block">
-            <div class="section-heading"><div><span class="section-kicker">DETALHE</span><h2>Produtos vendidos</h2></div></div>
+            <div class="section-heading">
+                <div><span class="section-kicker">PAGAMENTOS</span><h2>Formas de pagamento</h2></div>
+            </div>
+            <div class="payment-breakdown">
+                <div th:each="pb : ${paymentBars}"
+                     class="payment-row"
+                     th:classappend="${pb.isPending()} ? ' payment-pending' : ''">
+                    <div class="payment-row-top">
+                        <span class="payment-label" th:text="${pb.label()}"></span>
+                        <span class="payment-amount" th:text="${@labels.money(pb.amount())}"></span>
+                        <span class="payment-pct" th:text="${@labels.percent(pb.share())}"></span>
+                    </div>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill"
+                             th:style="'width: ' + ${pb.barWidth()} + '%'"></div>
+                    </div>
+                    <div th:if="${pb.isPending()}"
+                         class="notice notice-warning payment-alert" role="alert">
+                        ⚠ Há valores a receber. Lembre-se de confirmar os pagamentos pendentes.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Sales Evolution Chart ─────────────────────────────────────── -->
+        <section class="section-block chart-card">
+            <div class="section-heading">
+                <div><span class="section-kicker">EVOLUÇÃO</span><h2>Faturamento no período</h2></div>
+                <div class="chart-toggles">
+                    <div class="toggle-group" role="group" aria-label="Modo do gráfico">
+                        <button type="button" class="toggle-btn is-active" id="btn-standard">Padrão</button>
+                        <button type="button" class="toggle-btn" id="btn-stacked">Empilhado</button>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="sales-chart" aria-label="Gráfico de faturamento" role="img"></canvas>
+            </div>
+        </section>
+
+        <!-- ── Top 5 Products ─────────────────────────────────────────────── -->
+        <section class="section-block">
+            <div class="section-heading">
+                <div><span class="section-kicker">RANKING</span><h2>Top 5 produtos</h2></div>
+                <small class="section-meta">Por faturamento</small>
+            </div>
+            <ol class="ranking-list">
+                <li class="ranking-item" th:each="p, stat : ${summary.top5()}">
+                    <span class="rank-badge" th:text="${stat.index + 1}"></span>
+                    <div class="ranking-info">
+                        <strong th:text="${p.product().name}"></strong>
+                        <small th:text="${@labels.type(p.product().type)}"></small>
+                    </div>
+                    <div class="ranking-stats">
+                        <span class="ranking-units" th:text="${p.quantity() + ' un.'}"></span>
+                        <strong class="ranking-revenue" th:text="${@labels.money(p.revenue())}"></strong>
+                    </div>
+                </li>
+                <li th:if="${#lists.isEmpty(summary.top5())}" class="ranking-empty">
+                    Nenhum produto vendido nesse período.
+                </li>
+            </ol>
+        </section>
+
+        <!-- ── Detailed product table ────────────────────────────────────── -->
+        <section class="section-block">
+            <div class="section-heading">
+                <div><span class="section-kicker">DETALHE</span><h2>Produtos vendidos</h2></div>
+            </div>
             <div class="table-wrap">
                 <table class="data-table">
-                    <thead><tr><th>Produto</th><th>Unidades vendidas</th><th>Faturamento</th></tr></thead>
+                    <thead><tr><th>Produto</th><th>Unidades</th><th>Faturamento</th><th>CMV</th><th>Lucro Bruto</th></tr></thead>
                     <tbody>
                     <tr th:each="metric : ${summary.products()}">
                         <td><strong th:text="${metric.product().name}"></strong><small th:text="${@labels.type(metric.product().type)}"></small></td>
                         <td th:text="${metric.quantity()}"></td>
                         <td><strong th:text="${@labels.money(metric.revenue())}"></strong></td>
+                        <td th:text="${@labels.money(metric.cmv())}"></td>
+                        <td><strong th:text="${@labels.money(metric.profit())}"></strong></td>
                     </tr>
-                    <tr th:if="${#lists.isEmpty(summary.products())}"><td colspan="3" class="table-empty">Nenhuma venda nesse período.</td></tr>
+                    <tr th:if="${#lists.isEmpty(summary.products())}">
+                        <td colspan="5" class="table-empty">Nenhuma venda nesse período.</td>
+                    </tr>
                     </tbody>
                 </table>
             </div>
         </section>
+
+        <div class="notice notice-neutral cash-note">
+            O lucro é calculado sobre o CMV (custo real dos itens vendidos). Compras de mercado são registradas separadamente e não afetam o CMV do período.
+        </div>
+
+        </div><!-- /th:unless empty -->
     </main>
 </div>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function () {
+    // ── Custom period toggle ─────────────────────────────────────────────
+    var btnCustom = document.getElementById('btn-custom');
+    var customRow = document.getElementById('custom-row');
+    if (btnCustom && customRow) {
+        btnCustom.addEventListener('click', function () {
+            var isHidden = customRow.classList.toggle('hidden');
+            if (!isHidden) {
+                btnCustom.classList.add('is-selected');
+                document.querySelectorAll('.period-tabs button[type=submit]').forEach(function (b) {
+                    b.classList.remove('is-selected');
+                });
+            } else {
+                btnCustom.classList.remove('is-selected');
+            }
+        });
+    }
+
+    // ── Chart.js ─────────────────────────────────────────────────────────
+    var rawData = /*[[${chartJson}]]*/ [];
+    if (typeof rawData === 'string') {
+        try { rawData = JSON.parse(rawData); } catch(e) { rawData = []; }
+    }
+    var canvas = document.getElementById('sales-chart');
+    if (!canvas || !rawData || rawData.length === 0) return;
+
+    var labels   = rawData.map(function (d) { return d.label; });
+    var revenues = rawData.map(function (d) { return parseFloat(d.revenue) || 0; });
+    var profits  = rawData.map(function (d) { return parseFloat(d.profit)  || 0; });
+
+    var sum = revenues.reduce(function (a, b) { return a + b; }, 0);
+    var avgRevenue = revenues.length > 0 ? sum / revenues.length : 0;
+
+    var revenueDataset = {
+        label: 'Faturamento',
+        data: revenues,
+        backgroundColor: 'rgba(23, 63, 66, 0.82)',
+        borderRadius: 6,
+        borderSkipped: false,
+        order: 2
+    };
+    var profitDataset = {
+        label: 'Lucro',
+        data: profits,
+        backgroundColor: 'rgba(128, 169, 148, 0.82)',
+        borderRadius: 6,
+        borderSkipped: false,
+        order: 3
+    };
+    var avgDataset = {
+        label: 'Média faturamento',
+        data: revenues.map(function () { return avgRevenue; }),
+        type: 'line',
+        borderColor: 'rgba(207, 112, 76, 0.9)',
+        borderWidth: 2,
+        borderDash: [5, 4],
+        pointRadius: 0,
+        fill: false,
+        order: 1
+    };
+
+    var ctx = canvas.getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [revenueDataset, profitDataset, avgDataset] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { font: { family: 'DM Sans', size: 12 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            if (ctx.dataset.label === 'Média faturamento') return null;
+                            var val = ctx.parsed.y;
+                            return ctx.dataset.label + ': R\$ ' + val.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                        },
+                        afterBody: function (items) {
+                            var idx = items[0].dataIndex;
+                            return ['Pedidos: ' + rawData[idx].orders];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { family: 'DM Sans', size: 11 } }
+                },
+                y: {
+                    ticks: {
+                        font: { family: 'DM Sans', size: 11 },
+                        callback: function (val) {
+                            if (val >= 1000) return 'R$ ' + (val / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + 'k';
+                            return 'R$ ' + val.toLocaleString('pt-BR', { maximumFractionDigits: 0 });
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // ── Standard / Stacked toggle ────────────────────────────────────────
+    document.getElementById('btn-standard').addEventListener('click', function () {
+        chart.options.scales.x.stacked = false;
+        chart.options.scales.y.stacked = false;
+        chart.update();
+        this.classList.add('is-active');
+        document.getElementById('btn-stacked').classList.remove('is-active');
+    });
+    document.getElementById('btn-stacked').addEventListener('click', function () {
+        chart.options.scales.x.stacked = true;
+        chart.options.scales.y.stacked = true;
+        chart.update();
+        this.classList.add('is-active');
+        document.getElementById('btn-standard').classList.remove('is-active');
+    });
+})();
+/*]]>*/
+</script>
 </body>
 </html>

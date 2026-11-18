@@ -5,14 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Produtos · Doce & Pão</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <script>!function(){var t=localStorage.getItem("dc-theme")||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}();</script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .recipe-panel { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line); }
+        .recipe-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .recipe-header h4 { margin: 0; font-size: 13px; font-weight: 700; color: var(--navy); }
+        .recipe-cost-badge { font-size: 11px; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+        .cost-complete { background: #e6f4ea; color: #137333; }
+        .cost-incomplete { background: #fef7e0; color: #b06000; }
+        .recipe-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+        .recipe-table th, .recipe-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #f0eee8; }
+        .recipe-add-form { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; align-items: end; margin-top: 8px; }
+        .recipe-add-form .field { margin-bottom: 0; }
+        .recipe-add-form label { font-size: 10px; }
+        .recipe-add-form input, .recipe-add-form select { height: 32px; font-size: 12px; }
+    </style>
 </head>
 <body>
 <div class="app-shell">
     <div th:replace="~{fragments/navigation :: navigation('products')}"></div>
     <main class="main-content">
         <div class="page-heading"><div><p class="eyebrow">CATÁLOGO INTERNO</p><h1>Produtos</h1>
-            <p class="page-subtitle">Atualize preços e disponibilidade dos itens vendidos.</p></div></div>
+            <p class="page-subtitle">Atualize preços, disponibilidade e fichas técnicas dos itens vendidos.</p></div></div>
         <div th:if="${success}" class="notice notice-success" th:text="${success}" role="status"></div>
         <div th:if="${error}" class="notice notice-error" th:text="${error}" role="alert"></div>
         <section class="section-block create-panel">
@@ -65,6 +80,62 @@
                         </div>
                     </form>
 
+                    <!-- Ficha Técnica -->
+                    <div class="recipe-panel" th:with="costResult=${costs != null ? costs.get(product.id) : null}, recipeList=${recipes != null ? recipes.get(product.id) : null}">
+                        <div class="recipe-header">
+                            <h4>Ficha Técnica (Receita)</h4>
+                            <div>
+                                <span th:if="${costResult != null && costResult.complete()}" class="recipe-cost-badge cost-complete"
+                                      th:text="'Custo: ' + ${@labels.money(costResult.unitCost())}"></span>
+                                <span th:if="${costResult != null && !costResult.complete()}" class="recipe-cost-badge cost-incomplete"
+                                      th:text="${costResult.message()}" th:title="${costResult.message()}"></span>
+                            </div>
+                        </div>
+
+                        <div th:if="${recipeList != null && !#lists.isEmpty(recipeList)}">
+                            <table class="recipe-table">
+                                <thead><tr><th>Ingrediente</th><th>Qtd na receita</th><th>Rendimento</th><th>Qtd / Unidade</th><th></th></tr></thead>
+                                <tbody>
+                                <tr th:each="item : ${recipeList}">
+                                    <td><strong th:text="${item.ingredient.name}"></strong> (<span th:text="${@labels.measure(item.ingredient.unit)}"></span>)</td>
+                                    <td th:text="${@labels.quantityWithUnit(item.quantity, item.ingredient.unit)}"></td>
+                                    <td th:text="${item.recipeYield} + ' un'"></td>
+                                    <td th:text="${@labels.quantityWithUnit(item.getQuantityPerUnit(), item.ingredient.unit)}"></td>
+                                    <td style="text-align: right;">
+                                        <form th:action="@{/products/{id}/ingredients/{recipeId}/delete(id=${product.id}, recipeId=${item.id})}" method="post" style="display:inline;">
+                                            <button type="submit" class="button button-danger-ghost button-sm">Remover</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div th:if="${recipeList == null || #lists.isEmpty(recipeList)}" style="font-size: 11px; color: var(--muted); margin-bottom: 8px;">
+                            Nenhum ingrediente adicionado à ficha técnica ainda.
+                        </div>
+
+                        <!-- Form para adicionar ingrediente -->
+                        <form th:action="@{/products/{id}/ingredients(id=${product.id})}" method="post" class="recipe-add-form" th:if="${availableIngredients != null && !#lists.isEmpty(availableIngredients)}">
+                            <div class="field">
+                                <label>Ingrediente</label>
+                                <select name="ingredientId" required>
+                                    <option value="">Selecione</option>
+                                    <option th:each="ing : ${availableIngredients}" th:value="${ing.id}"
+                                            th:text="${ing.name + ' (' + @labels.measure(ing.unit) + ')'}"></option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Qtd usada</label>
+                                <input name="quantity" type="number" min="0.001" step="0.001" placeholder="Ex: 500" required>
+                            </div>
+                            <div class="field">
+                                <label>Rendimento</label>
+                                <input name="recipeYield" type="number" min="1" step="1" value="1" placeholder="Ex: 10" required>
+                            </div>
+                            <button type="submit" class="button button-secondary button-sm">+ Adicionar</button>
+                        </form>
+                    </div>
+
                     <div class="manage-actions">
                         <div class="manage-actions-left">
                             <button class="button button-secondary" type="submit" th:form="${'form-save-' + product.id}">Salvar alterações</button>
@@ -77,10 +148,11 @@
                                 <input type="hidden" name="active" th:value="${!product.active}">
                                 <button class="button button-quiet" type="submit" th:text="${product.active} ? 'Desativar' : 'Ativar'"></button>
                             </form>
-                            <form th:action="@{/products/{id}/delete(id=${product.id})}" method="post"
-                                  onsubmit="return confirm('Deseja realmente excluir este produto?');">
-                                <button class="button button-danger-ghost" type="submit" title="Excluir produto">Excluir</button>
-                            </form>
+                            <button class="button button-danger-ghost" type="button"
+                                    th:data-id="${product.id}"
+                                    th:data-name="${product.name}"
+                                    onclick="confirmDeleteProduct(this.dataset.id, this.dataset.name)"
+                                    title="Excluir produto">Excluir</button>
                         </div>
                     </div>
                 </article>
@@ -89,5 +161,83 @@
         </section>
     </main>
 </div>
+
+<div id="delete-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 id="delete-modal-title">Excluir Produto</h3>
+            <button type="button" class="modal-close-btn" onclick="closeDeleteModal()" aria-label="Fechar">✕</button>
+        </div>
+        <div class="modal-body">
+            <p id="delete-modal-msg"></p>
+            <div id="delete-modal-deps" class="modal-deps-box" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="button button-quiet" onclick="closeDeleteModal()">Cancelar</button>
+            <form id="delete-modal-form" method="post" action="">
+                <input type="hidden" name="force" value="true">
+                <button type="submit" class="button button-danger">Confirmar exclusão</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDeleteProduct(id, name) {
+    const modal = document.getElementById('delete-modal');
+    const msg = document.getElementById('delete-modal-msg');
+    const depsBox = document.getElementById('delete-modal-deps');
+    const form = document.getElementById('delete-modal-form');
+
+    msg.innerHTML = 'Deseja realmente excluir o produto <strong>' + name + '</strong>?';
+    depsBox.style.display = 'none';
+    depsBox.innerHTML = 'Verificando dependências...';
+    form.action = '/products/' + id + '/delete';
+
+    modal.classList.add('is-open');
+
+    fetch('/products/' + id + '/dependencies')
+        .then(res => res.json())
+        .then(data => {
+            const items = [];
+            if (data.orderCount > 0) {
+                items.push('<strong>' + data.orderCount + '</strong> venda(s) registrada(s)');
+            }
+            if (data.stockCount > 0) {
+                items.push('<strong>' + data.stockCount + '</strong> registro(s) de controle de estoque');
+            }
+            if (data.recipeIngredients && data.recipeIngredients.length > 0) {
+                items.push('Ingredientes na ficha técnica: <strong>' + data.recipeIngredients.join(', ') + '</strong>');
+            }
+
+            if (items.length > 0) {
+                depsBox.innerHTML = '<strong>Atenção:</strong> Este produto possui registros dependentes que também serão excluídos:<ul>' +
+                    items.map(item => '<li>' + item + '</li>').join('') +
+                    '</ul><p style="margin: 6px 0 0; font-weight: 600;">Ao confirmar, esses vínculos serão apagados definitivamente.</p>';
+                depsBox.style.display = 'block';
+            } else {
+                depsBox.innerHTML = '<span style="color: #2b744a;">Nenhuma dependência ou venda vinculada a este produto.</span>';
+                depsBox.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            depsBox.style.display = 'none';
+        });
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('delete-modal');
+    if (modal) modal.classList.remove('is-open');
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDeleteModal();
+});
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('delete-modal');
+    if (modal && e.target === modal) closeDeleteModal();
+});
+</script>
 </body>
 </html>

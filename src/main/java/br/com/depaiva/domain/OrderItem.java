@@ -38,12 +38,21 @@ public class OrderItem {
     @Column(name = "unit_price", nullable = false, columnDefinition = "TEXT")
     private BigDecimal unitPrice;
 
+    @Convert(converter = MoneyConverter.class)
+    @Column(name = "unit_cost_snapshot", columnDefinition = "TEXT")
+    private BigDecimal unitCostSnapshot;
+
     protected OrderItem() {}
 
     OrderItem(Product product, int quantity) {
+        this(product, quantity, null);
+    }
+
+    public OrderItem(Product product, int quantity, BigDecimal unitCostSnapshot) {
         this.product = product;
         this.quantity = quantity;
         this.unitPrice = product.getPrice();
+        this.unitCostSnapshot = unitCostSnapshot != null ? unitCostSnapshot.setScale(2, RoundingMode.HALF_UP) : null;
     }
 
     void setOrder(Order order) {
@@ -61,8 +70,17 @@ public class OrderItem {
         return unitPrice.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
     }
 
+    public BigDecimal calculateCmv() {
+        if (unitCostSnapshot == null) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return unitCostSnapshot.multiply(BigDecimal.valueOf(quantity)).setScale(2, RoundingMode.HALF_UP);
+    }
+
     public Long getId() { return id; }
+    public Order getOrder() { return order; }
     public Product getProduct() { return product; }
     public int getQuantity() { return quantity; }
     public BigDecimal getUnitPrice() { return unitPrice; }
+    public BigDecimal getUnitCostSnapshot() { return unitCostSnapshot; }
 }

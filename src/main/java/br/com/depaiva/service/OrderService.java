@@ -4,10 +4,14 @@ import br.com.depaiva.domain.Order;
 import br.com.depaiva.domain.Product;
 import br.com.depaiva.repository.OrderRepository;
 import br.com.depaiva.repository.ProductRepository;
+import br.com.depaiva.service.cost.ProductCostResult;
+import br.com.depaiva.service.cost.ProductCostService;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,27 +20,50 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final StockService stockService;
+    private final ProductCostService productCostService;
     private final ReentrantLock saleLock = new ReentrantLock(true);
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository, StockService stockService) {
+        this(orderRepository, productRepository, stockService, null);
+    }
+
+    @Autowired
+    public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
+                        StockService stockService, ProductCostService productCostService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.stockService = stockService;
+        this.productCostService = productCostService;
     }
 
     @Transactional
     public Order registerInPersonSale(LocalDateTime date, String customerName, String customerContact,
                                      Map<Long, Integer> quantities) {
+        return registerInPersonSale(date, customerName, customerContact, null, quantities);
+    }
+
+    @Transactional
+    public Order registerInPersonSale(LocalDateTime date, String customerName, String customerContact,
+                                     br.com.depaiva.domain.PaymentMethod paymentMethod,
+                                     Map<Long, Integer> quantities) {
         saleLock.lock();
         try {
-            Order order = Order.inPersonSale(date, customerName, customerContact);
+            Order order = Order.inPersonSale(date, customerName, customerContact, paymentMethod);
             for (Map.Entry<Long, Integer> entry : quantities.entrySet()) {
                 if (entry.getValue() == null || entry.getValue() <= 0) {
                     continue;
                 }
                 Product product = productRepository.findById(entry.getKey())
                         .orElseThrow(() -> new IllegalArgumentException("Um dos produtos selecionados não existe."));
-                order.addItem(product, entry.getValue());
+
+                BigDecimal unitCostSnapshot = null;
+                if (productCostService != null) {
+                    ProductCostResult costResult = productCostService.calculateUnitCost(product);
+                    if (costResult.complete()) {
+                        unitCostSnapshot = costResult.unitCost();
+                    }
+                }
+                order.addItem(product, entry.getValue(), unitCostSnapshot);
             }
             if (order.getItems().isEmpty()) {
                 throw new IllegalArgumentException("Escolha pelo menos um produto para registrar a venda.");

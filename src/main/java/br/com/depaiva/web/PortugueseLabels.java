@@ -17,10 +17,21 @@ public class PortugueseLabels {
     private static final Locale BRAZIL = Locale.forLanguageTag("pt-BR");
 
     public String money(BigDecimal value) {
+        if (value == null) {
+            value = BigDecimal.ZERO;
+        }
         NumberFormat formatter = NumberFormat.getNumberInstance(BRAZIL);
         formatter.setMinimumFractionDigits(2);
         formatter.setMaximumFractionDigits(2);
         return "R$ " + formatter.format(value.setScale(2, RoundingMode.HALF_UP));
+    }
+
+    public String percent(BigDecimal value) {
+        if (value == null) {
+            return "0%";
+        }
+        BigDecimal pct = value.multiply(BigDecimal.valueOf(100)).setScale(1, RoundingMode.HALF_UP);
+        return pct.stripTrailingZeros().toPlainString().replace('.', ',') + "%";
     }
 
     public String type(Type value) {
@@ -32,11 +43,16 @@ public class PortugueseLabels {
     }
 
     public String measure(Measure value) {
+        if (value == null) {
+            return "";
+        }
         return switch (value) {
             case GRAMS -> "g";
             case KILO_GRAMS -> "kg";
             case LITERS -> "L";
             case MILLILITERS -> "ml";
+            case UNIT -> "un";
+            case DOZEN -> "dúzia";
         };
     }
 

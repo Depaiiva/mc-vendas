@@ -78,8 +78,13 @@ public class SalesController {
                     quantities.put(Long.parseLong(entry.getKey().substring(4)), quantity);
                 }
             }
+            br.com.depaiva.domain.PaymentMethod paymentMethod = null;
+            String pmRaw = fields.get("paymentMethod");
+            if (pmRaw != null && !pmRaw.isBlank()) {
+                try { paymentMethod = br.com.depaiva.domain.PaymentMethod.valueOf(pmRaw); } catch (IllegalArgumentException ignored) {}
+            }
             Order order = orderService.registerInPersonSale(
-                    date, fields.get("customerName"), fields.get("customerContact"), quantities);
+                    date, fields.get("customerName"), fields.get("customerContact"), paymentMethod, quantities);
             flash.addFlashAttribute("success", "Venda registrada: " + money(order.calculateTotal()) + ".");
         } catch (IllegalArgumentException exception) {
             flash.addFlashAttribute("error", exception.getMessage());

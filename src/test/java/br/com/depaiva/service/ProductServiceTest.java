@@ -11,12 +11,19 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import br.com.depaiva.domain.Ingredient;
+import br.com.depaiva.domain.Measure;
 import br.com.depaiva.domain.Product;
+import br.com.depaiva.domain.ProductIngredient;
 import br.com.depaiva.domain.Type;
 import br.com.depaiva.repository.DailyStockRepository;
+import br.com.depaiva.repository.IngredientRepository;
 import br.com.depaiva.repository.OrderItemRepository;
+import br.com.depaiva.repository.OrderRepository;
+import br.com.depaiva.repository.ProductIngredientRepository;
 import br.com.depaiva.repository.ProductRepository;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,11 +33,14 @@ class ProductServiceTest {
     private final ProductRepository products = mock(ProductRepository.class);
     private final DailyStockRepository dailyStocks = mock(DailyStockRepository.class);
     private final OrderItemRepository orderItems = mock(OrderItemRepository.class);
+    private final ProductIngredientRepository productIngredients = mock(ProductIngredientRepository.class);
+    private final IngredientRepository ingredients = mock(IngredientRepository.class);
+    private final OrderRepository orderRepository = mock(OrderRepository.class);
     private ProductService service;
 
     @BeforeEach
     void setUp() {
-        service = new ProductService(products, dailyStocks, orderItems);
+        service = new ProductService(products, dailyStocks, orderItems, productIngredients, ingredients, orderRepository);
     }
 
     @Test
@@ -134,5 +144,61 @@ class ProductServiceTest {
         IllegalStateException ex = assertThrows(IllegalStateException.class, () -> service.delete(8L));
         assertTrue(ex.getMessage().contains("estoque vinculado"));
         verify(products, never()).delete(any());
+    }
+
+    @Test
+    void addsAndRemovesRecipeIngredient() {
+        Product product = new Product("Bolo", new BigDecimal("10.00"), Type.CHILLED_CAKE, null);
+        ReflectionTestUtils.setField(product, "id", 10L);
+        Ingredient ingredient = new Ingredient("Farinha", Measure.GRAMS);
+        ReflectionTestUtils.setField(ingredient, "id", 20L);
+
+        when(products.findById(10L)).thenReturn(Optional.of(product));
+        when(ingredients.findById(20L)).thenReturn(Optional.of(ingredient));
+        when(productIngredients.findAllByProductId(10L)).thenReturn(List.of());
+        when(productIngredients.save(any(ProductIngredient.class))).thenAnswer(i -> i.getArgument(0));
+
+        ProductIngredient pi = service.addOrUpdateRecipeIngredient(10L, 20L, new BigDecimal("500.000"), 10);
+        assertNotNull(pi);
+        assertEquals(new BigDecimal("500.000"), pi.getQuantity());
+        assertEquals(10, pi.getRecipeYield());
+
+        service.removeRecipeIngredient(100L);
+        verify(productIngredients).deleteById(100L);
+    }
+
+    @Test
+    void deleteWithForceRemovesOrdersStocksAndRecipe() {
+        Product product = new Product("Bolo", new BigDecimal("10.00"), Type.CHILLED_CAKE, null);
+        ReflectionTestUtils.setField(product, "id", 15L);
+
+        when(products.findById(15L)).thenReturn(Optional.of(product));
+        when(orderItems.findAllByProductId(15L)).thenReturn(List.of());
+
+        service.delete(15L, true);
+
+        verify(dailyStocks).deleteAllByProductId(15L);
+        verify(productIngredients).deleteAllByProductId(15L);
+        verify(products).delete(product);
+    }
+
+    @Test
+    void getDependenciesReturnsCorrectSummary() {
+        Product product = new Product("Bolo", new BigDecimal("10.00"), Type.CHILLED_CAKE, null);
+        ReflectionTestUtils.setField(product, "id", 16L);
+        Ingredient ingredient = new Ingredient("Cacau", Measure.GRAMS);
+        ProductIngredient pi = new ProductIngredient(product, ingredient, new BigDecimal("50.000"), 1);
+
+        when(products.findById(16L)).thenReturn(Optional.of(product));
+        when(orderItems.countByProductId(16L)).thenReturn(4L);
+        when(dailyStocks.countByProductId(16L)).thenReturn(2L);
+        when(productIngredients.findAllByProductId(16L)).thenReturn(List.of(pi));
+
+        ProductService.ProductDependencySummary summary = service.getDependencies(16L);
+
+        assertEquals(4L, summary.orderCount());
+        assertEquals(2L, summary.stockCount());
+        assertEquals(List.of("Cacau"), summary.recipeIngredientNames());
+        org.junit.jupiter.api.Assertions.assertTrue(summary.hasDependencies());
     }
 }

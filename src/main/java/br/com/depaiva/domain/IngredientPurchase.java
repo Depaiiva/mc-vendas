@@ -37,6 +37,10 @@ public class IngredientPurchase {
     @Column(name = "unit_price", nullable = false, columnDefinition = "TEXT")
     private BigDecimal unitPrice;
 
+    @Convert(converter = MoneyConverter.class)
+    @Column(name = "total_cost", columnDefinition = "TEXT")
+    private BigDecimal totalCost;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Origin origin;
@@ -49,18 +53,39 @@ public class IngredientPurchase {
 
     public IngredientPurchase(LocalDate date, BigDecimal quantity, BigDecimal unitPrice,
                               Origin origin, Ingredient ingredient) {
-        if (date == null || quantity == null || quantity.signum() <= 0
-                || unitPrice == null || unitPrice.signum() <= 0 || ingredient == null) {
-            throw new IllegalArgumentException("Data, quantidade, preço e ingrediente são obrigatórios.");
+        this(date, quantity, unitPrice, null, origin, ingredient);
+    }
+
+    public IngredientPurchase(LocalDate date, BigDecimal quantity, BigDecimal unitPrice,
+                              BigDecimal totalCost, Origin origin, Ingredient ingredient) {
+        if (date == null || quantity == null || quantity.signum() <= 0 || ingredient == null) {
+            throw new IllegalArgumentException("Data, quantidade e ingrediente são obrigatórios.");
         }
         this.date = date;
         this.quantity = quantity.setScale(3, RoundingMode.HALF_UP);
-        this.unitPrice = unitPrice.setScale(2, RoundingMode.HALF_UP);
         this.origin = origin == null ? Origin.MANUAL : origin;
         this.ingredient = ingredient;
+
+        if (totalCost != null && totalCost.signum() > 0) {
+            this.totalCost = totalCost.setScale(2, RoundingMode.HALF_UP);
+            this.unitPrice = unitPrice != null ? unitPrice.setScale(4, RoundingMode.HALF_UP)
+                    : this.totalCost.divide(this.quantity, 4, RoundingMode.HALF_UP);
+        } else if (unitPrice != null && unitPrice.signum() > 0) {
+            this.unitPrice = unitPrice.setScale(4, RoundingMode.HALF_UP);
+            this.totalCost = this.quantity.multiply(this.unitPrice).setScale(2, RoundingMode.HALF_UP);
+        } else {
+            throw new IllegalArgumentException("Informe o valor total pago ou o preço unitário.");
+        }
     }
 
     public BigDecimal calculateTotalCost() {
+        return getTotalCost();
+    }
+
+    public BigDecimal getTotalCost() {
+        if (totalCost != null) {
+            return totalCost;
+        }
         return quantity.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
     }
 

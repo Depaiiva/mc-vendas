@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ingredientes e compras · Doce & Pão</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <script>!function(){var t=localStorage.getItem("dc-theme")||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}();</script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
 </head>
 <body>
@@ -12,7 +13,7 @@
     <div th:replace="~{fragments/navigation :: navigation('ingredients')}"></div>
     <main class="main-content">
         <div class="page-heading"><div><p class="eyebrow">CUSTOS E ABASTECIMENTO</p><h1>Ingredientes e compras</h1>
-            <p class="page-subtitle">Mantenha os ingredientes e acompanhe o que foi comprado.</p></div></div>
+            <p class="page-subtitle">Mantenha os ingredientes em unidades base (g, ml, un) e acompanhe o que foi comprado.</p></div></div>
         <div th:if="${success}" class="notice notice-success" th:text="${success}" role="status"></div>
         <div th:if="${error}" class="notice notice-error" th:text="${error}" role="alert"></div>
 
@@ -26,9 +27,9 @@
             </div>
             <div class="metric-grid">
                 <div class="metric-card metric-profit">
-                    <span>Unidade de medida</span>
+                    <span>Unidade base cadastrada</span>
                     <strong th:text="${@labels.measure(selectedIngredient.unit)}"></strong>
-                    <small>Unidade padrão cadastrada</small>
+                    <small>Unidade base única do estoque</small>
                 </div>
                 <div class="metric-card metric-sales">
                     <span>Quantidade total comprada</span>
@@ -48,9 +49,9 @@
                 <div class="section-heading"><div><span class="section-kicker">01</span><h2>Novo ingrediente</h2></div></div>
                 <form th:action="@{/ingredients/save}" method="post" class="form-stack">
                     <div class="field"><label for="ingredientName">Nome</label><input id="ingredientName" name="name" required maxlength="120"></div>
-                    <div class="field"><label for="ingredientUnit">Unidade de medida</label>
+                    <div class="field"><label for="ingredientUnit">Unidade base</label>
                         <select id="ingredientUnit" name="unit">
-                            <option th:each="measure : ${measures}" th:value="${measure}" th:text="${@labels.measure(measure)}"></option>
+                            <option th:each="measure : ${measures}" th:if="${measure.isBaseUnit()}" th:value="${measure}" th:text="${@labels.measure(measure)}"></option>
                         </select></div>
                     <button class="button button-primary" type="submit">Adicionar ingrediente</button>
                 </form>
@@ -64,19 +65,20 @@
                             <input type="hidden" name="id" th:value="${ingredient.id}">
                             <div class="field"><label th:for="${'ingredient-' + ingredient.id}">Ingrediente</label>
                                 <input th:id="${'ingredient-' + ingredient.id}" name="name" th:value="${ingredient.name}" required maxlength="120"></div>
-                            <div class="field"><label th:for="${'unit-' + ingredient.id}">Unidade</label>
+                            <div class="field"><label th:for="${'unit-' + ingredient.id}">Unidade base</label>
                                 <select th:id="${'unit-' + ingredient.id}" name="unit">
-                                    <option th:each="measure : ${measures}" th:value="${measure}" th:text="${@labels.measure(measure)}"
+                                    <option th:each="measure : ${measures}" th:if="${measure.isBaseUnit()}" th:value="${measure}" th:text="${@labels.measure(measure)}"
                                             th:selected="${measure == ingredient.unit}"></option>
                                 </select></div>
                             <button class="button button-secondary button-sm" type="submit" title="Salvar alterações">Salvar</button>
                         </form>
                         <div class="ingredient-row-actions">
                             <a class="button button-quiet button-sm" th:href="@{/ingredients/{id}(id=${ingredient.id})}" title="Ver detalhes do ingrediente">Ver</a>
-                            <form th:action="@{/ingredients/{id}/delete(id=${ingredient.id})}" method="post" class="ingredient-delete-form"
-                                  onsubmit="return confirm('Deseja realmente excluir este ingrediente?');">
-                                <button class="button button-danger-ghost button-sm" type="submit" title="Excluir ingrediente">Excluir</button>
-                            </form>
+                            <button class="button button-danger-ghost button-sm" type="button"
+                                    th:data-id="${ingredient.id}"
+                                    th:data-name="${ingredient.name}"
+                                    onclick="confirmDeleteIngredient(this.dataset.id, this.dataset.name)"
+                                    title="Excluir ingrediente">Excluir</button>
                         </div>
                     </article>
                     <div th:if="${#lists.isEmpty(ingredients)}" class="table-empty">Nenhum ingrediente cadastrado.</div>
@@ -91,11 +93,20 @@
                         <select id="purchaseIngredient" name="ingredientId" required>
                             <option value="">Selecione</option>
                             <option th:each="ingredient : ${ingredients}" th:value="${ingredient.id}"
-                                    th:text="${ingredient.name + ' · ' + @labels.measure(ingredient.unit)}"></option>
+                                    th:text="${ingredient.name + ' · base ' + @labels.measure(ingredient.unit)}"></option>
                         </select></div>
                     <div class="form-pair">
                         <div class="field"><label for="purchaseQuantity">Quantidade</label><input id="purchaseQuantity" name="quantity" type="number" min="0.001" step="0.001" required></div>
-                        <div class="field"><label for="purchasePrice">Preço por unidade (R$)</label><input id="purchasePrice" name="unitPrice" type="number" min="0.01" step="0.01" required></div>
+                        <div class="field"><label for="purchaseUnit">Unidade de compra</label>
+                            <select id="purchaseUnit" name="unit">
+                                <option value="">Mesma do ingrediente</option>
+                                <option th:each="measure : ${measures}" th:value="${measure}" th:text="${@labels.measure(measure)}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-pair">
+                        <div class="field"><label for="purchaseTotal">Valor total pago (R$)</label><input id="purchaseTotal" name="totalCost" type="number" min="0.01" step="0.01" placeholder="Ex: 10.50"></div>
+                        <div class="field"><label for="purchasePrice">Ou preço unitário (R$)</label><input id="purchasePrice" name="unitPrice" type="number" min="0.0001" step="0.0001" placeholder="Ex: 5.25"></div>
                     </div>
                     <button class="button button-primary" type="submit">Registrar compra</button>
                 </form>
@@ -111,7 +122,7 @@
             </form>
             <div class="table-wrap">
                 <table class="data-table">
-                    <thead><tr><th>Data</th><th>Ingrediente</th><th>Quantidade</th><th>Preço unitário</th><th>Total</th></tr></thead>
+                    <thead><tr><th>Data</th><th>Ingrediente</th><th>Quantidade (base)</th><th>Custo unitário base</th><th>Total pago</th></tr></thead>
                     <tbody>
                     <tr th:each="purchase : ${purchases}">
                         <td th:text="${@labels.date(purchase.date)}"></td>
@@ -127,5 +138,80 @@
         </section>
     </main>
 </div>
+
+<div id="delete-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <div class="modal-dialog">
+        <div class="modal-header">
+            <h3 id="delete-modal-title">Excluir Ingrediente</h3>
+            <button type="button" class="modal-close-btn" onclick="closeDeleteModal()" aria-label="Fechar">✕</button>
+        </div>
+        <div class="modal-body">
+            <p id="delete-modal-msg"></p>
+            <div id="delete-modal-deps" class="modal-deps-box" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="button button-quiet" onclick="closeDeleteModal()">Cancelar</button>
+            <form id="delete-modal-form" method="post" action="">
+                <input type="hidden" name="force" value="true">
+                <button type="submit" class="button button-danger">Confirmar exclusão</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmDeleteIngredient(id, name) {
+    const modal = document.getElementById('delete-modal');
+    const msg = document.getElementById('delete-modal-msg');
+    const depsBox = document.getElementById('delete-modal-deps');
+    const form = document.getElementById('delete-modal-form');
+
+    msg.innerHTML = 'Deseja realmente excluir o ingrediente <strong>' + name + '</strong>?';
+    depsBox.style.display = 'none';
+    depsBox.innerHTML = 'Verificando dependências...';
+    form.action = '/ingredients/' + id + '/delete';
+
+    modal.classList.add('is-open');
+
+    fetch('/ingredients/' + id + '/dependencies')
+        .then(res => res.json())
+        .then(data => {
+            const items = [];
+            if (data.productNames && data.productNames.length > 0) {
+                items.push('Produtos na ficha técnica que dependem deste ingrediente: <strong>' + data.productNames.join(', ') + '</strong>');
+            }
+            if (data.purchaseCount > 0) {
+                items.push('<strong>' + data.purchaseCount + '</strong> compra(s) registrada(s)');
+            }
+
+            if (items.length > 0) {
+                depsBox.innerHTML = '<strong>Atenção:</strong> Os seguintes registros dependem deste ingrediente e também serão excluídos:<ul>' +
+                    items.map(item => '<li>' + item + '</li>').join('') +
+                    '</ul><p style="margin: 6px 0 0; font-weight: 600;">Ao confirmar, esses vínculos serão removidos definitivamente.</p>';
+                depsBox.style.display = 'block';
+            } else {
+                depsBox.innerHTML = '<span style="color: #2b744a;">Nenhum produto ou compra vinculado a este ingrediente.</span>';
+                depsBox.style.display = 'block';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            depsBox.style.display = 'none';
+        });
+}
+
+function closeDeleteModal() {
+    const modal = document.getElementById('delete-modal');
+    if (modal) modal.classList.remove('is-open');
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeDeleteModal();
+});
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('delete-modal');
+    if (modal && e.target === modal) closeDeleteModal();
+});
+</script>
 </body>
 </html>

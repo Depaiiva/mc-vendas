@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Venda rápida · Doce & Pão</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <script>!function(){var t=localStorage.getItem("dc-theme")||(window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");document.documentElement.setAttribute("data-theme",t)}();</script>
     <link rel="stylesheet" th:href="@{/css/app.css}">
     <script th:src="@{/js/sale.js}" defer></script>
 </head>
@@ -80,6 +81,24 @@
                     <div class="field">
                         <label for="customerContact">Contato <span class="muted">(opcional)</span></label>
                         <input id="customerContact" name="customerContact" type="text" maxlength="160" placeholder="Telefone ou outro contato">
+                    </div>
+                    <div class="field">
+                        <label>Forma de pagamento</label>
+                        <div class="payment-pills">
+                            <label class="payment-pill">
+                                <input type="radio" name="paymentMethod" value="PIX">
+                                <span>Pix</span>
+                            </label>
+                            <label class="payment-pill">
+                                <input type="radio" name="paymentMethod" value="CARD">
+                                <span>Cartão</span>
+                            </label>
+                            <label class="payment-pill">
+                                <input type="radio" name="paymentMethod" value="CASH">
+                                <span>Dinheiro</span>
+                            </label>
+                        </div>
+                        <small>Deixe em branco para registrar como "Pendente / A receber".</small>
                     </div>
                 </div>
             </section>

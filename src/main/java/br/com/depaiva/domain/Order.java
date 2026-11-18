@@ -48,6 +48,10 @@ public class Order {
     @Column(nullable = false)
     private Channel channel;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method")
+    private PaymentMethod paymentMethod;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @OrderBy("id ASC")
     private List<OrderItem> items = new ArrayList<>();
@@ -63,9 +67,15 @@ public class Order {
     }
 
     public static Order inPersonSale(LocalDateTime date, String customerName, String customerContact) {
+        return inPersonSale(date, customerName, customerContact, null);
+    }
+
+    public static Order inPersonSale(LocalDateTime date, String customerName, String customerContact, PaymentMethod paymentMethod) {
         String name = customerName == null || customerName.isBlank() ? "Presencial" : customerName.trim();
         String contact = customerContact == null || customerContact.isBlank() ? null : customerContact.trim();
-        return new Order(date, Status.DELIVERED, name, contact, Channel.IN_PERSON);
+        Order order = new Order(date, Status.DELIVERED, name, contact, Channel.IN_PERSON);
+        order.paymentMethod = paymentMethod;
+        return order;
     }
 
     public static Order create(LocalDateTime date, Status status, String customerName,
@@ -74,6 +84,10 @@ public class Order {
     }
 
     public void addItem(Product product, int quantity) {
+        addItem(product, quantity, null);
+    }
+
+    public void addItem(Product product, int quantity, BigDecimal unitCostSnapshot) {
         if (product == null || !product.isActive()) {
             throw new IllegalArgumentException("O produto precisa estar ativo para ser vendido.");
         }
@@ -86,7 +100,7 @@ public class Order {
                 return;
             }
         }
-        OrderItem item = new OrderItem(product, quantity);
+        OrderItem item = new OrderItem(product, quantity, unitCostSnapshot);
         item.setOrder(this);
         items.add(item);
     }
@@ -139,5 +153,6 @@ public class Order {
     public String getCustomerName() { return customerName; }
     public String getCustomerContact() { return customerContact; }
     public Channel getChannel() { return channel; }
+    public PaymentMethod getPaymentMethod() { return paymentMethod; }
     public List<OrderItem> getItems() { return items; }
 }

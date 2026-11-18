@@ -14,6 +14,7 @@ import br.com.depaiva.domain.Measure;
 import br.com.depaiva.domain.Origin;
 import br.com.depaiva.repository.IngredientPurchaseRepository;
 import br.com.depaiva.repository.IngredientRepository;
+import br.com.depaiva.repository.ProductIngredientRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,11 +26,12 @@ import org.springframework.test.util.ReflectionTestUtils;
 class IngredientServiceTest {
     private final IngredientRepository ingredients = org.mockito.Mockito.mock(IngredientRepository.class);
     private final IngredientPurchaseRepository purchases = org.mockito.Mockito.mock(IngredientPurchaseRepository.class);
+    private final ProductIngredientRepository productIngredients = org.mockito.Mockito.mock(ProductIngredientRepository.class);
     private IngredientService service;
 
     @BeforeEach
     void setUp() {
-        service = new IngredientService(ingredients, purchases);
+        service = new IngredientService(ingredients, purchases, productIngredients);
     }
 
     @Test
@@ -42,7 +44,7 @@ class IngredientServiceTest {
 
         assertNotNull(result);
         assertEquals("Açúcar", result.getName());
-        assertEquals(Measure.KILO_GRAMS, result.getUnit());
+        assertEquals(Measure.GRAMS, result.getUnit());
         verify(ingredients).save(any(Ingredient.class));
     }
 
@@ -122,5 +124,36 @@ class IngredientServiceTest {
         assertEquals(new BigDecimal("1500.000"), summary.totalQuantity());
         assertEquals(new BigDecimal("30.00"), summary.totalSpent());
         assertEquals(2, summary.purchases().size());
+    }
+
+    @Test
+    void deleteWithForceRemovesRecipeAndPurchases() {
+        Ingredient existing = new Ingredient("Frango", Measure.GRAMS);
+        ReflectionTestUtils.setField(existing, "id", 4L);
+        when(ingredients.findById(4L)).thenReturn(Optional.of(existing));
+
+        service.delete(4L, true);
+
+        verify(productIngredients).deleteAllByIngredientId(4L);
+        verify(purchases).deleteAllByIngredientId(4L);
+        verify(ingredients).delete(existing);
+    }
+
+    @Test
+    void getDependenciesReturnsCorrectSummary() {
+        Ingredient existing = new Ingredient("Chocolate", Measure.GRAMS);
+        ReflectionTestUtils.setField(existing, "id", 8L);
+        when(ingredients.findById(8L)).thenReturn(Optional.of(existing));
+        when(purchases.countByIngredientId(8L)).thenReturn(3L);
+
+        br.com.depaiva.domain.Product bolo = new br.com.depaiva.domain.Product("Bolo", new BigDecimal("10.00"), br.com.depaiva.domain.Type.CHILLED_CAKE, null);
+        br.com.depaiva.domain.ProductIngredient pi = new br.com.depaiva.domain.ProductIngredient(bolo, existing, new BigDecimal("100.000"), 1);
+        when(productIngredients.findAllByIngredientId(8L)).thenReturn(List.of(pi));
+
+        IngredientService.IngredientDependencySummary summary = service.getDependencies(8L);
+
+        assertEquals(3L, summary.purchaseCount());
+        assertEquals(List.of("Bolo"), summary.productNames());
+        org.junit.jupiter.api.Assertions.assertTrue(summary.hasDependencies());
     }
 }

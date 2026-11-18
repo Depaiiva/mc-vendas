@@ -44,5 +44,15 @@ class PortugueseLabelsTest {
         assertEquals("500 g", labels.quantityWithUnit(new BigDecimal("500.000"), Measure.GRAMS));
         assertEquals("0,75 L", labels.quantityWithUnit(new BigDecimal("0.750"), Measure.LITERS));
         assertEquals("250 ml", labels.quantityWithUnit(new BigDecimal("250.000"), Measure.MILLILITERS));
+        assertEquals("12 un", labels.quantityWithUnit(new BigDecimal("12.000"), Measure.UNIT));
+        assertEquals("2 dúzia", labels.quantityWithUnit(new BigDecimal("2.000"), Measure.DOZEN));
+    }
+
+    @Test
+    void formatsPercent() {
+        assertEquals("50%", labels.percent(new BigDecimal("0.5000")));
+        assertEquals("68,8%", labels.percent(new BigDecimal("0.6875")));
+        assertEquals("0%", labels.percent(BigDecimal.ZERO));
+        assertEquals("0%", labels.percent(null));
     }
 }

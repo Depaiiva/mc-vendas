@@ -208,4 +208,94 @@ class InventoryControllerTest {
         assertEquals("redirect:/products", mav.getViewName());
         assertEquals("Possui vendas vinculadas.", flash.getFlashAttributes().get("error"));
     }
+
+    @Test
+    void deleteProductWithForceCallsServiceWithForceTrue() {
+        RedirectAttributesModelMap flash = new RedirectAttributesModelMap();
+
+        ModelAndView mav = controller.deleteProduct(5L, null, true, flash);
+
+        verify(products).delete(5L, true);
+        assertEquals("redirect:/products", mav.getViewName());
+        assertEquals("Produto excluído com sucesso.", flash.getFlashAttributes().get("success"));
+    }
+
+    @Test
+    void deleteIngredientWithForceCallsServiceWithForceTrue() {
+        RedirectAttributesModelMap flash = new RedirectAttributesModelMap();
+
+        ModelAndView mav = controller.deleteIngredient(3L, null, true, flash);
+
+        verify(ingredients).delete(3L, true);
+        assertEquals("redirect:/ingredients", mav.getViewName());
+        assertEquals("Ingrediente excluído com sucesso.", flash.getFlashAttributes().get("success"));
+    }
+
+    @Test
+    void getProductDependenciesReturnsSummary() {
+        Product bolo = new Product("Bolo", new BigDecimal("10.00"), Type.CHILLED_CAKE, null);
+        ReflectionTestUtils.setField(bolo, "id", 7L);
+        when(products.getDependencies(7L)).thenReturn(
+                new ProductService.ProductDependencySummary(bolo, 5L, 2L, List.of("Ovo", "Farinha"))
+        );
+
+        InventoryController.ProductDependencyDto dto = controller.getProductDependencies(7L);
+
+        assertEquals(7L, dto.id());
+        assertEquals("Bolo", dto.name());
+        assertEquals(5L, dto.orderCount());
+        assertEquals(2L, dto.stockCount());
+        assertEquals(List.of("Ovo", "Farinha"), dto.recipeIngredients());
+        org.junit.jupiter.api.Assertions.assertTrue(dto.hasDependencies());
+    }
+
+    @Test
+    void getIngredientDependenciesReturnsSummary() {
+        Ingredient farinha = new Ingredient("Farinha", Measure.GRAMS);
+        ReflectionTestUtils.setField(farinha, "id", 9L);
+        when(ingredients.getDependencies(9L)).thenReturn(
+                new IngredientService.IngredientDependencySummary(farinha, 4L, List.of("Bolo", "Pão"))
+        );
+
+        InventoryController.IngredientDependencyDto dto = controller.getIngredientDependencies(9L);
+
+        assertEquals(9L, dto.id());
+        assertEquals("Farinha", dto.name());
+        assertEquals(4L, dto.purchaseCount());
+        assertEquals(List.of("Bolo", "Pão"), dto.productNames());
+        org.junit.jupiter.api.Assertions.assertTrue(dto.hasDependencies());
+    }
+
+    @Test
+    void confirmDeleteProductPageRendersViewWithDependencies() {
+        Product bolo = new Product("Bolo", new BigDecimal("10.00"), Type.CHILLED_CAKE, null);
+        ReflectionTestUtils.setField(bolo, "id", 7L);
+        when(products.getDependencies(7L)).thenReturn(
+                new ProductService.ProductDependencySummary(bolo, 3L, 1L, List.of("Ovo"))
+        );
+
+        ModelAndView mav = controller.confirmDeleteProductPage(7L);
+
+        assertEquals("confirm-delete", mav.getViewName());
+        assertEquals("produto", mav.getModel().get("itemType"));
+        assertEquals("Bolo", mav.getModel().get("itemName"));
+        assertEquals(3L, mav.getModel().get("orderCount"));
+        assertEquals(1L, mav.getModel().get("stockCount"));
+    }
+
+    @Test
+    void confirmDeleteIngredientPageRendersViewWithDependencies() {
+        Ingredient ovo = new Ingredient("Ovo", Measure.UNIT);
+        ReflectionTestUtils.setField(ovo, "id", 12L);
+        when(ingredients.getDependencies(12L)).thenReturn(
+                new IngredientService.IngredientDependencySummary(ovo, 2L, List.of("Bolo"))
+        );
+
+        ModelAndView mav = controller.confirmDeleteIngredientPage(12L);
+
+        assertEquals("confirm-delete", mav.getViewName());
+        assertEquals("ingrediente", mav.getModel().get("itemType"));
+        assertEquals("Ovo", mav.getModel().get("itemName"));
+        assertEquals(2L, mav.getModel().get("purchaseCount"));
+    }
 }
